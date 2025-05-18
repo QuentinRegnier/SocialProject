@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import {Dimensions, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import {Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import NavBar from '../components/NavBar';
+import { TAB_BAR_HEIGHT } from '@/components/NavBar';
+import { LightTheme, DarkTheme } from '@/constants/Colors';
 
 const {height, width} = Dimensions.get('window');
 const HEADER_HEIGHT = 120;
-const TAB_BAR_HEIGHT = 100;
-const TAB_BAR_RADIUS = 36;
 
 export default function App() {
+  const scheme = useColorScheme();
+  const isLight = scheme === 'light';
+  const theme = isLight ? LightTheme : DarkTheme;
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -26,11 +30,7 @@ export default function App() {
             </View>
           ))}
         </ScrollView>
-
-        {/* Bottom Tab Bar */}
-        <View style={[styles.tabBar, styles.light_mode]}>
-          <Text style={styles.text}>Navigation</Text>
-        </View>
+        <NavBar isLight={false} />
     </View>
   );
 }
@@ -58,28 +58,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  tabBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    width: width,
-    height: TAB_BAR_HEIGHT,
-    borderTopLeftRadius: TAB_BAR_RADIUS,
-    borderTopRightRadius: TAB_BAR_RADIUS,
-    borderColor: '#ccc',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 10, // Android shadow
-    shadowColor: '#000', // iOS shadow
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    zIndex: 100, // S'assurer qu'elle passe devant le ScrollView
-  },
-  text: {
-    color: '#333',
-    fontWeight: 'bold',
   },
   light_mode: {
     backgroundColor: '#ffffff',
