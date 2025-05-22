@@ -1,31 +1,44 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-//import HomeIcon from '../assets/icons/home.svg';
-//import SearchIcon from '../assets/icons/search.svg';
-//import ProfileIcon from '../assets/icons/profile.svg';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
+import HomeIcon from '../assets/icons/HomeIcon';
+import ChatIcon from '../assets/icons/ChatIcon';
+import SearchIcon from '../assets/icons/SearchIcon';
+import PubIcon from '../assets/icons/PubIcon';
 import { LightTheme, DarkTheme } from '@/constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-export const TAB_BAR_HEIGHT = 100;
+export const TAB_BAR_HEIGHT = 66;
 const TAB_BAR_RADIUS = 36;
+const ICON_SIZE = 30;
 
 interface NavBarProps {
-  isLight: boolean; // true = light mode, false = dark mode
+  isLight: boolean;
+  imageUser: string;
+  isHome?: boolean;
+  isChat?: boolean;
 }
 
-const NavBar: React.FC<NavBarProps> = ({ isLight }) => {
+const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat }) => {
   const theme = isLight ? LightTheme : DarkTheme;
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
-    {/* <TouchableOpacity style={[styles.container, { backgroundColor: theme.navBar }]}>
-      <HomeIcon width={28} height={28} stroke={theme.icon} />
-    </TouchableOpacity> */}
-    {/* <TouchableOpacity style={styles.iconContainer}>
-        <SearchIcon width={28} height={28} stroke={theme.icon} />
-      </TouchableOpacity> */}
-    {/* <TouchableOpacity style={styles.iconContainer}>
-        <ProfileIcon width={28} height={28} stroke={theme.icon} />
-      </TouchableOpacity> */}
+    <View style={[styles.container, { bottom: -insets.bottom, height: TAB_BAR_HEIGHT + insets.bottom }, { backgroundColor: theme.navBar }]}>
+      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+        <HomeIcon color={isHome ? theme.activeIcon : theme.icon} size={ICON_SIZE} isHome={isHome} />
+      </TouchableOpacity>
+      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+        <SearchIcon color={theme.icon} size={ICON_SIZE} />
+      </TouchableOpacity>
+      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+        <PubIcon color={theme.icon} size={ICON_SIZE} />
+      </TouchableOpacity>
+      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+          <ChatIcon color={isChat ? theme.activeIcon : theme.icon} size={ICON_SIZE} isChat={isChat} />
+      </TouchableOpacity>
+      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+          <Image source={{ uri: imageUser }} style={styles.profilePicture} />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -33,10 +46,8 @@ const NavBar: React.FC<NavBarProps> = ({ isLight }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 0,
     width: width,
     height: TAB_BAR_HEIGHT,
-    backgroundColor: '#fff',
     borderTopLeftRadius: TAB_BAR_RADIUS,
     borderTopRightRadius: TAB_BAR_RADIUS,
     flexDirection: 'row',
@@ -49,9 +60,11 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     zIndex: 100,
   },
-  iconContainer: {
-    padding: 10,
-  },
+  profilePicture:{
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    borderRadius: 18
+  }
 });
 
 export default NavBar;

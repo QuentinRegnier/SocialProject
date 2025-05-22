@@ -20,3 +20,10 @@
 ### Dimanche 18 mai 2025
 - Création d'une base react-native
 - Création d'une NavBar
+### Mardi 20 mai 2025
+- Création des post (uniquement génération pas création l'utilisateur)
+### Jeudi 22 mai 2025
+- Ajout du système de like (ui terminer)
+- Changement des appels à l'API
+- Ajout du refresh des post et de la navbar terminer
+- Responsive de la navbar entre SE/11/16Pro terminer
