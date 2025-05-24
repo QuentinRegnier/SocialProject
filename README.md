@@ -27,3 +27,28 @@
 - Changement des appels à l'API
 - Ajout du refresh des post et de la navbar terminer
 - Responsive de la navbar entre SE/11/16Pro terminer
+### Vendredi 23 mai 2025
+- Système avec expo routeur d'onglet qui ne se recharge pas de façon à rendre plus fluide l'app
+- Écran de chargement fluide avec fondu :
+    [SPLASH] 
+        ↓ (automatique, via Expo config)
+    [LOADING SCREEN - index.tsx]
+        ↳ Affiche "Mon App"
+        ↳ Attends 2.5s (minDelay)
+        ↳ Vérifie isConnected
+            ↓
+            ↳ Si isConnected === true → préparer [MAIN]
+            ↳ Sinon                  → préparer [LOGIN]
+
+            ↓ (montage en arrière-plan)
+    [MAIN] ou [LOGIN]
+        ↳ Préchargement des images (Image.prefetch)
+        ↳ Attente du layout complet (onLayout)
+        ↳ Attente de la `NavBar` (préchargée + onLayout)
+        ↳ Une fois tout prêt → setScreenReady(true)
+        ↓
+    [_layout.tsx]
+        ↳ Attend screenReady === true
+        ↳ Lance animation de fondu (fade out de loading)
+        ↳ Affiche entièrement [MAIN + NavBar] ou [LOGIN]
+                

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
 import HomeIcon from '../assets/icons/HomeIcon';
 import ChatIcon from '../assets/icons/ChatIcon';
@@ -6,6 +6,7 @@ import SearchIcon from '../assets/icons/SearchIcon';
 import PubIcon from '../assets/icons/PubIcon';
 import { LightTheme, DarkTheme } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 export const TAB_BAR_HEIGHT = 66;
@@ -17,13 +18,44 @@ interface NavBarProps {
   imageUser: string;
   isHome?: boolean;
   isChat?: boolean;
+  onReady?: () => void; // Callback pour signaler que la navBar est prête
 }
 
-const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat }) => {
+const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat, onReady }) => {
   const theme = isLight ? LightTheme : DarkTheme;
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  
+  const [layoutReady, setLayoutReady] = useState(false);
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
+
+  useEffect(() => {
+    const preloadImages = async () => {
+      try {
+        if (!imageUser) return;
+        await Image.prefetch(imageUser);
+        setImagesPreloaded(true);
+      } catch (error) {
+        console.warn('Erreur préchargement image NavBar :', error);
+        setImagesPreloaded(true); // fallback même en cas d'erreur
+      }
+    };
+
+    preloadImages();
+  }, [imageUser]);
+
+  useEffect(() => {
+    if (layoutReady && imagesPreloaded) {
+      onReady?.(); // signale au parent que tout est prêt
+    }
+  }, [layoutReady, imagesPreloaded]);
   return (
-    <View style={[styles.container, { bottom: -insets.bottom, height: TAB_BAR_HEIGHT + insets.bottom }, { backgroundColor: theme.navBar }]}>
+    <View style={[
+      styles.container, 
+      { height: TAB_BAR_HEIGHT + insets.bottom }, { backgroundColor: theme.navBar }
+      ]}
+      onLayout={() => setLayoutReady(true)}
+    >
       <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
         <HomeIcon color={isHome ? theme.activeIcon : theme.icon} size={ICON_SIZE} isHome={isHome} />
       </TouchableOpacity>
@@ -33,7 +65,10 @@ const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat }) =
       <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
         <PubIcon color={theme.icon} size={ICON_SIZE} />
       </TouchableOpacity>
-      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+      <TouchableOpacity 
+        style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} 
+        onPress={() => router.push('/chat')}
+      >
           <ChatIcon color={isChat ? theme.activeIcon : theme.icon} size={ICON_SIZE} isChat={isChat} />
       </TouchableOpacity>
       <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
@@ -59,6 +94,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     zIndex: 100,
+    bottom: 0,
   },
   profilePicture:{
     width: ICON_SIZE,
