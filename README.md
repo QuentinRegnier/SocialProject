@@ -54,3 +54,5 @@
    ↳ Lance le `fade out` de `LoadingScreen`
    ↳ Affiche le contenu final prêt (MAIN + NavBar ou LOGIN)
 ```              
+### Samedi 24 mai 2025 :
+- Terminer le loading pour synchroniser le loading également sur la navbar
