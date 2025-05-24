@@ -30,25 +30,27 @@
 ### Vendredi 23 mai 2025
 - Système avec expo routeur d'onglet qui ne se recharge pas de façon à rendre plus fluide l'app
 - Écran de chargement fluide avec fondu :
-    [SPLASH] 
-        ↓ (automatique, via Expo config)
-    [LOADING SCREEN - index.tsx]
-        ↳ Affiche "Mon App"
-        ↳ Attends 2.5s (minDelay)
-        ↳ Vérifie isConnected
-            ↓
-            ↳ Si isConnected === true → préparer [MAIN]
-            ↳ Sinon                  → préparer [LOGIN]
+```text
+[SPLASH]
+   ↓ (automatique, via app.json / splash config)
+[LOADING SCREEN - index.tsx]
+   ↳ Affiche "Mon App"
+   ↳ Attend 2.5 secondes minimum (`minDelayPassed`)
+   ↳ Vérifie `isConnected`
+       ↓
+       ├── isConnected === true   → prépare [MAIN]
+       └── isConnected === false  → prépare [LOGIN]
 
-            ↓ (montage en arrière-plan)
-    [MAIN] ou [LOGIN]
-        ↳ Préchargement des images (Image.prefetch)
-        ↳ Attente du layout complet (onLayout)
-        ↳ Attente de la `NavBar` (préchargée + onLayout)
-        ↳ Une fois tout prêt → setScreenReady(true)
-        ↓
-    [_layout.tsx]
-        ↳ Attend screenReady === true
-        ↳ Lance animation de fondu (fade out de loading)
-        ↳ Affiche entièrement [MAIN + NavBar] ou [LOGIN]
-                
+       ↓ (montage anticipé en arrière-plan)
+[MAIN] ou [LOGIN]
+   ↳ Précharge les images distantes avec `Image.prefetch`
+   ↳ Attend que le layout soit monté (`onLayout`)
+   ↳ Attend que la NavBar soit aussi prête (`onLayout` + image chargée)
+   ↳ Une fois tout prêt → `setScreenReady(true)`
+
+       ↓
+[_layout.tsx]
+   ↳ Surveille `screenReady`
+   ↳ Lance le `fade out` de `LoadingScreen`
+   ↳ Affiche le contenu final prêt (MAIN + NavBar ou LOGIN)
+```              
