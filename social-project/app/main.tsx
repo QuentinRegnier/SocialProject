@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme, Image, TouchableOpacity, FlatList, Animated, RefreshControl } from 'react-native';
+import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme, Image, TouchableOpacity, FlatList, Animated, RefreshControl, ActivityIndicator, Platform } from 'react-native';
 import NavBar from '../components/NavBar';
 import { TAB_BAR_HEIGHT } from '@/components/NavBar';
 import { LightTheme, DarkTheme } from '@/constants/Colors';
@@ -11,9 +11,10 @@ import LikeIcon from '../assets/icons/LikeIcon';
 import CommentIcon from '../assets/icons/CommentIcon';
 import { useRouter } from 'expo-router';
 import { useReady } from '../components/ReadyContext';
+import NetInfo from '@react-native-community/netinfo';
+import * as FileSystem from 'expo-file-system';
 
-
-// API
+// API  
 type APIRequest =
   | "take-users-informations"
   | "take-posts-informations"
@@ -90,6 +91,15 @@ function formaterDate(dateString: string): string {
     return `${jour} ${moisNoms[mois - 1]} ${annee}`;
   }
 }
+const [isOffline, setIsOffline] = useState(false);
+useEffect(() => {
+  const unsubscribe = NetInfo.addEventListener(state => {
+    setIsOffline(!state.isConnected);
+  });
+  return () => unsubscribe();
+}, []);
+// ####################### Local Storage #########################
+const local_infoUser = require('../assets/data-user/profile-info.json');
 
 // ################################################
 
@@ -118,10 +128,15 @@ export default function Main() {
   const [postRecommandation, setPostRecommandation] = useState<any[] | null>(null);
     // API_FETCH_DATA
   const fetchData = async () => {
-      const info = await API("take-users-informations", "12928192");
-      const posts = await API("take-post-recommandation", "12928192");
-      setInfoUser(info);
-      setPostRecommandation(posts);
+      if (isOffline){
+        setInfoUser(local_infoUser);
+        setPostRecommandation(null);
+      }else{
+        const info = await API("take-users-informations", local_infoUser.id);
+        const posts = await API("take-post-recommandation", local_infoUser.id);
+        setInfoUser(info);
+        setPostRecommandation(posts);
+      }
     };
     // API_EXECUTE
   useEffect(() => {
@@ -228,6 +243,51 @@ export default function Main() {
       </View>
     );
   }
+  // ########### Skeleton Placeholder ###########
+  const PlaceholderPost = () => (
+    <View style={[styles.post, { backgroundColor: '#ddd' }]}>
+      {/* Post header */}
+      <View style={styles.postHeader}>
+        {/* Profile Image */}
+        <View style={{ marginRight: 12 }}>
+          <View style={[styles.profileContainer, { backgroundColor: '#bbb' }]} />
+        </View>
+
+        {/* Name and Date */}
+        <View style={{ flex: 1 }}>
+          <View style={{ width: 100, height: 16, backgroundColor: '#bbb', borderRadius: 4 }} />
+          <View style={{ width: 60, height: 12, backgroundColor: '#ccc', borderRadius: 4, marginTop: 6 }} />
+        </View>
+
+        {/* Icons (Send & Grid) */}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 20, height: 20, backgroundColor: '#aaa', borderRadius: 4, transform: [{ rotate: '-35deg' }], top: -2 }} />
+          <View style={{ width: 20, height: 20, backgroundColor: '#aaa', borderRadius: 4, marginLeft: 16 }} />
+        </View>
+      </View>
+
+      {/* Post content (image placeholder) */}
+      <View style={[styles.postContainerImage, { backgroundColor: '#bbb' }]} />
+
+      {/* Post actions */}
+      <View style={styles.postActions}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}>
+          <View style={{ width: 24, height: 24, backgroundColor: '#aaa', borderRadius: 4 }} />
+          <View style={[styles.countText, { backgroundColor: '#ccc', width: 30, height: 12, marginLeft: 6, borderRadius: 4 }]} />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 24, height: 24, backgroundColor: '#aaa', borderRadius: 4 }} />
+          <View style={[styles.countText, { backgroundColor: '#ccc', width: 30, height: 12, marginLeft: 6, borderRadius: 4 }]} />
+        </View>
+      </View>
+
+      {/* Post description */}
+      <View style={styles.postDescription}>
+        <View style={{ width: '100%', height: 10, backgroundColor: '#ccc', borderRadius: 4, marginBottom: 6 }} />
+        <View style={{ width: '60%', height: 10, backgroundColor: '#ccc', borderRadius: 4 }} />
+      </View>
+    </View>
+  );
   // ########### Refresh Data ###########
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -241,8 +301,10 @@ export default function Main() {
   const [imagesPreloaded, setImagesPreloaded] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
   const [navBarReady, setNavBarReady] = useState(false);
-  const showNavBar = navBarReady && layoutReady && imagesPreloaded;
+  const [profileImageLoaded, setProfileImageLoaded] = useState(false);
+  const showNavBar = navBarReady && layoutReady && profileImageLoaded;
   const navBarOpacity = useRef(new Animated.Value(0)).current;
+  const [localProfileImageUri, setLocalProfileImageUri] = useState<string | null>(null);
   useEffect(() => {
     if (showNavBar) {
       Animated.timing(navBarOpacity, {
@@ -253,50 +315,74 @@ export default function Main() {
     }
   }, [showNavBar]);
   useEffect(() => {
-    if (!postRecommandation || !infoUser) return;
+  if (!postRecommandation || !infoUser) return;
 
-    let isCancelled = false;
+  let isCancelled = false;
 
-    const preload = async () => {
-      try {
-        const postImages = postRecommandation
-          .flatMap(post => post.IMAGES ?? [])
-          .filter(url => typeof url === 'string');
-
-        const profileImage = infoUser.profileImage;
-        const imageUrls = [...postImages, profileImage];
-
-        console.log('Préchargement des images :', imageUrls);
-
-        if (imageUrls.length === 0) {
-          if (!isCancelled) setImagesPreloaded(true);
-          return;
+  const preload = async () => {
+    try {
+      // 1. Précharge l'image de profil en premier
+      if (infoUser.profileImage) {
+        if(local_infoUser.lastChangeProfileImage == infoUser.lastChangeProfileImage) {
+          console.log("Image de profil déjà chargée");
+          const extension = infoUser.profileImage.split('.').pop();
+          const uri = FileSystem.documentDirectory + 'profile-image.' + extension;
+          setLocalProfileImageUri(uri);
+          setProfileImageLoaded(true);
+        }else{
+          console.log("Retéléchargement de l'image de profil");
+          const url = infoUser.profileImage;
+          const extension = url.split('.').pop();
+          const localUri = FileSystem.documentDirectory + 'profile-image.' + extension;
+          try {
+            const downloadResumable = FileSystem.createDownloadResumable(url, localUri, {});
+            const result = await downloadResumable.downloadAsync();
+            if (result && result.uri && !isCancelled) {
+              setLocalProfileImageUri(result.uri);
+              setProfileImageLoaded(true);
+            }
+          } catch (error) {
+            console.warn("Erreur de téléchargement de l'image :", error);
+          }
         }
-
-        await Promise.all(imageUrls.map(url => Image.prefetch(url)));
-
-        console.log('Préchargement terminé');
-
-        if (!isCancelled) setImagesPreloaded(true);
-      } catch (error) {
-        console.warn("Erreur préchargement images", error);
-        if (!isCancelled) setImagesPreloaded(true);
       }
-    };
 
-    preload();
+      // 2. Précharge les images des posts
+      const postImages = postRecommandation
+        .flatMap(post => post.IMAGES ?? [])
+        .filter(url => typeof url === 'string');
 
-    return () => {
-      isCancelled = true;
-      setImagesPreloaded(false);
-    };
-  }, [postRecommandation, infoUser]);
+      if (postImages.length === 0) {
+        if (!isCancelled) setImagesPreloaded(true);
+        return;
+      }
+
+      await Promise.all(postImages.map(url => Image.prefetch(url)));
+
+      if (!isCancelled) setImagesPreloaded(true);
+    } catch (error) {
+      console.warn("Erreur préchargement images", error);
+      if (!isCancelled) {
+        setProfileImageLoaded(true); // fallback si erreur
+        setImagesPreloaded(true);
+      }
+    }
+  };
+
+  preload();
+
+  return () => {
+    isCancelled = true;
+    setProfileImageLoaded(false);
+    setImagesPreloaded(false);
+  };
+}, [postRecommandation, infoUser]);
 
   useEffect(() => {
-    if (imagesPreloaded && layoutReady && navBarReady) {
+    if (layoutReady && navBarReady) {
       setScreenReady(true);
     }
-  }, [imagesPreloaded, layoutReady, navBarReady]);
+  }, [layoutReady, navBarReady]);
   // ########### Render ###########
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]} onLayout={() => setLayoutReady(true)}>
@@ -319,26 +405,40 @@ export default function Main() {
             />
           }
         >
-        {postRecommandation?.map((post, i) => (
-          <Post
-            key={post.id}
-            profileImage={post.profileImage}
-            name={post.name}
-            date={post.date}
-            IMAGES={post.IMAGES}
-            description={post.description}
-            text={post.text}
-            likes={post.likes}
-            comments={post.comments}
-            isLiked={post.isLiked}
-            isCommented={post.isCommented}
-            postId={post.id}
-          />
-        ))}
-        </ScrollView>
+        {!imagesPreloaded ? (
+          isOffline ? (
+            <View style={{ alignItems: 'center', marginTop: 24 }}>
+              <Image source={require('../assets/images/no-connection.jpg')} style={{ width: 120, height: 120 }} />
+              <Text style={{ color: theme.text, marginTop: 8 }}>Pas de connexion internet</Text>
+            </View>
+          ) : !imagesPreloaded && (
+            <>
+              <PlaceholderPost />
+              <PlaceholderPost />
+            </>
+          )
+        ) : (
+          postRecommandation?.map((post, i) => (
+            <Post
+              key={post.id}
+              profileImage={post.profileImage}
+              name={post.name}
+              date={post.date}
+              IMAGES={post.IMAGES}
+              description={post.description}
+              text={post.text}
+              likes={post.likes}
+              comments={post.comments}
+              isLiked={post.isLiked}
+              isCommented={post.isCommented}
+              postId={post.id}
+            />
+          ))
+        )}
+      </ScrollView>
       {infoUser && (
         <Animated.View style={{ opacity: navBarOpacity }}>
-          <NavBar isLight={isLight} imageUser={infoUser.profileImage} isHome={true} onReady={() => setNavBarReady(true)} />
+          <NavBar isLight={isLight} imageUser={localProfileImageUri ?? ''} isHome={true} onReady={() => setNavBarReady(true)} />
         </Animated.View>
       )}
     </View>

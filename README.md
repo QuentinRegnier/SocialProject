@@ -56,3 +56,9 @@
 ```              
 ### Samedi 24 mai 2025 :
 - Terminer le loading pour synchroniser le loading également sur la navbar
+
+### Mardi 27 mai 2025 :
+- Retirer le chargment des images comme condition du loading
+- Ajoute un placeholder au chargement du contenu de `main.tsx`
+- Mise en place du cache de l'image de profile **(à tester plus tard puisque le seul moyen de voit si le cache fonctionne est de build l'app)**
+- Début de mise en place du cache des informations de l'user sauf qu'actuellement le **json** est dans `assets/data-user` hors on ne peut donc le modifier c'est pourquoi il faudra faire la même chose que pour `profile-image`
