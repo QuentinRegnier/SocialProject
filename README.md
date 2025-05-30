@@ -62,3 +62,9 @@
 - Ajoute un placeholder au chargement du contenu de `main.tsx`
 - Mise en place du cache de l'image de profile **(à tester plus tard puisque le seul moyen de voit si le cache fonctionne est de build l'app)**
 - Début de mise en place du cache des informations de l'user sauf qu'actuellement le **json** est dans `assets/data-user` hors on ne peut donc le modifier c'est pourquoi il faudra faire la même chose que pour `profile-image`
+### Vendredi 30 mai 2025 :
+- Mise en place du chargement asynchrone des posts et des placeholders
+- Implémentation du cache expo-image pour les posts
+- Mise à jour des placeholders pour les adapter en fonction du post qu'il représente
+- Suppréssion de la place que prenait les placeholders ou les posts lorsque `isVisible === false`
+- Nettoyage du code en créant des composants qu'on a ensuite importer

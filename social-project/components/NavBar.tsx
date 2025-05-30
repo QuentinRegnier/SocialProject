@@ -15,7 +15,7 @@ const ICON_SIZE = 30;
 
 interface NavBarProps {
   isLight: boolean;
-  imageUser: string;
+  imageUser: string | undefined;
   isHome?: boolean;
   isChat?: boolean;
   onReady?: () => void; // Callback pour signaler que la navBar est prête
