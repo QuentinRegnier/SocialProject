@@ -68,3 +68,5 @@
 - Mise à jour des placeholders pour les adapter en fonction du post qu'il représente
 - Suppréssion de la place que prenait les placeholders ou les posts lorsque `isVisible === false`
 - Nettoyage du code en créant des composants qu'on a ensuite importer
+### Mercredi 4 juin 2025 :
+- Rendre fluide le montage des post lors de l'initialisation de `main.tsx` et dans pour la fonction `refresh`

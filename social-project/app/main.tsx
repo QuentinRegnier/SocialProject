@@ -1,10 +1,9 @@
 import React, { useState, useRef, useEffect, use, JSX } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme, Image, Animated, RefreshControl } from 'react-native';
+import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme, Image, Animated, RefreshControl, FlatList } from 'react-native';
 // ################# Components #################
 import NavBar from '../components/NavBar';
 import Post from '../components/Post';
-import PlaceholderPost from '../components/PlaceholderPost';
 import { TAB_BAR_HEIGHT } from '@/components/NavBar';
 // ################# Styles #################
 import { LightTheme, DarkTheme } from '@/constants/Colors';
@@ -22,6 +21,10 @@ const IMAGE_SIZE = width - 40;
 
 // ###############################################
 export default function Main() {
+  const initialNumToRender = 3;
+  const maxToRenderPerBatch = 5;
+  const windowSize = 10;
+  // ###############################################
   const isOffline = useNetworkStatus();
   useEffect(() => {
     console.log("Statut de la connexion :", isOffline ? "Hors ligne" : "En ligne");
@@ -101,11 +104,13 @@ export default function Main() {
   const onRefresh = async () => {
     setRefreshing(true);
     setPostRecommandation([]); // Supprimer les posts actuels (optionnel)
-    setPostsReady(new Set());
-    setPlaceholdersGone(new Set());
+    setPostLoadedIds(new Set()); // Réinitialiser le compteur de posts chargés
     await fetchData();
     setRefreshing(false);
   };
+  function predictedGeneratePosts(L: number, A: number, B: number, W: number, N: number): number {
+    return Math.min(L, A + B * Math.floor(W / 2)) - N;
+  }
   // ########### Ready Context ###########
   const { setScreenReady } = useReady();
   const [layoutReady, setLayoutReady] = useState(false);
@@ -114,16 +119,15 @@ export default function Main() {
   const showNavBar = navBarReady && layoutReady && profileImageLoaded;
   const navBarOpacity = useRef(new Animated.Value(0)).current;
   const [localProfileImageUri, setLocalProfileImageUri] = useState<string | null>(null);
-  const [postsReady, setPostsReady] = useState<Set<number>>(new Set());
-  const [placeholdersGone, setPlaceholdersGone] = useState<Set<number>>(new Set());
-  const markPostReady = (postId: number) => {
-    setPostsReady(prev => {
-      const newSet = new Set(prev);
-      newSet.add(postId);
-      return newSet;
-    });
+  const [postLoadedIds, setPostLoadedIds] = useState<Set<string>>(new Set());
+  const onPostReady = (id: string) => {
+    setPostLoadedIds(prev => new Set(prev).add(id));
   };
-  
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    console.log(postLoadedIds.size, postRecommandation?.length);
+    console.log("Post Loaded:", postLoadedIds);
+  }, [postLoadedIds, postRecommandation]);
   useEffect(() => {
     if (showNavBar) {
       Animated.timing(navBarOpacity, {
@@ -170,54 +174,11 @@ export default function Main() {
     };
   }, [postRecommandation, infoUser]);
   useEffect(() => {
-    if (layoutReady && navBarReady) {
+    if (layoutReady && navBarReady && postLoadedIds.size >= predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 0)) {
       setScreenReady(true);
+      setReady(true);
     }
-  }, [layoutReady, navBarReady]);
-  // ########### Render Post ###########
-  const [renderedPosts, setRenderedPosts] = useState<JSX.Element[]>([]);
-  useEffect(() => {
-    if (!postRecommandation) return;
-
-    requestAnimationFrame(() => {
-      const posts = postRecommandation.map((post) => (
-        <Post
-          key={`post-${post.id}`}
-          profileImage={post.profileImage}
-          name={post.name}
-          date={post.date}
-          IMAGES={post.IMAGES}
-          description={post.description}
-          text={post.text}
-          likes={post.likes}
-          comments={post.comments}
-          isLiked={post.isLiked}
-          isCommented={post.isCommented}
-          postId={post.id}
-          theme={theme}
-          onReady={markPostReady}
-          isVisible={postsReady.has(post.id) && placeholdersGone.has(post.id)}
-        />
-      ));
-      setRenderedPosts(posts);
-    });
-  }, [postRecommandation, postsReady]);
-  useEffect(() => {
-    if (!postRecommandation) return;
-
-    postRecommandation.forEach((post) => {
-      if (!postsReady.has(post.id) && !placeholdersGone.has(post.id)) {
-        const timeout = setTimeout(() => {
-          setPlaceholdersGone(prev => {
-            const next = new Set(prev);
-            next.add(post.id);
-            return next;
-          });
-        }, 100);
-        return () => clearTimeout(timeout);
-      }
-    });
-  }, [postRecommandation, postsReady]);
+  }, [layoutReady, navBarReady, postLoadedIds, postRecommandation]);
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]} onLayout={() => setLayoutReady(true)}>
       <StatusBar barStyle={isLight ? 'dark-content' : 'light-content'} />
@@ -226,38 +187,63 @@ export default function Main() {
           <Text style={{ color: theme.text, fontSize: 24, padding: 16 }}>Naturist</Text>
         </View>
         {/* Main content scrollable */}
-        <ScrollView
+        {!isOffline?(
+        <FlatList
+          data={postRecommandation}
           contentContainerStyle={styles.scrollContent}
-          style={[styles.main, { top: -insets.top }, { backgroundColor: theme.background }]}
+          style={[
+            styles.main,
+            { top: -insets.top },
+            { backgroundColor: theme.background },
+            (ready && postLoadedIds.size < predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1)) ? { opacity: 0 } : { opacity: 1 }
+          ]}
           showsVerticalScrollIndicator={false}
+          keyExtractor={(post) => `post-${post.id}`}
+          renderItem={({ item: post }) => (
+            <Post
+              profileImage={post.profileImage}
+              name={post.name}
+              date={post.date}
+              IMAGES={post.IMAGES}
+              description={post.description}
+              text={post.text}
+              likes={post.likes}
+              comments={post.comments}
+              isLiked={post.isLiked}
+              isCommented={post.isCommented}
+              postId={post.id}
+              theme={theme}
+              onReady={() => onPostReady(post.id)}
+            />
+          )}
+          initialNumToRender={initialNumToRender}
+          maxToRenderPerBatch={maxToRenderPerBatch}
+          windowSize={windowSize}
+          removeClippedSubviews={false}
+          onEndReachedThreshold={0.5}
+          onEndReached={() => {
+            // ta pagination ici
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#ff0000']} // Couleur du spinner Android
-              tintColor={theme.text} // Couleur spinner iOS
+              colors={['#ff0000']}
+              tintColor={theme.text}
             />
           }
-        >
-        {renderedPosts.length > 0 ? renderedPosts : null}
-        {isOffline ? (
-            <View style={{ alignItems: 'center', marginTop: 24 }}>
-              <Image source={require('../assets/images/no-connection.jpg')} style={{ width: 120, height: 120 }} />
-              <Text style={{ color: theme.text, marginTop: 8 }}>Pas de connexion internet</Text>
-            </View>
-          ) : (
-            postRecommandation?.map((post) => {
-              return (
-                <PlaceholderPost
-                  isImage={post.IMAGES.length > 0}
-                  isVisible={!postsReady.has(post.id)}
-                  key={`placeholder-${post.id}`}
-                />
-              );
-            })
-          )
-        }
-      </ScrollView>
+        />
+        ):(
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Image
+              source={require('@/assets/images/no-connection.jpg')}
+              style={{ width: 220, height: 220, resizeMode: 'contain', marginBottom: 24 }}
+            />
+            <Text style={{ color: theme.text, fontSize: 18, textAlign: 'center' }}>
+              Pas de connexion Internet
+            </Text>
+          </View>
+        )}
       {localProfileImageUri && (
         <Animated.View style={{ opacity: navBarOpacity }}>
           <NavBar isLight={isLight} imageUser={localProfileImageUri ?? undefined} isHome={true} onReady={() => setNavBarReady(true)} />

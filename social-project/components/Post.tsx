@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Animated, StyleSheet, Dimensions } from 'react-native';
-import { useRouter } from 'expo-router';
-import LikeIcon from '../assets/icons/LikeIcon';
-import CommentIcon from '../assets/icons/CommentIcon';
-import SendIcon from '../assets/icons/SendIcon';
-import GridIcon from '../assets/icons/GridIcon';
+import { View, Text, FlatList, TouchableOpacity, Animated, StyleSheet, Dimensions, InteractionManager } from 'react-native';
+import LikeIcon from '@/assets/icons/LikeIcon';
+import CommentIcon from '@/assets/icons/CommentIcon';
+import SendIcon from '@/assets/icons/SendIcon';
+import GridIcon from '@/assets/icons/GridIcon';
 import { formaterDate } from '@/utils/formaterDate';
 import { API } from '@/utils/API';
 import { Image } from 'expo-image';
+import PostImage from '@/components/PostImage';
 
 const { width } = Dimensions.get('window');
 const IMAGE_SIZE = width - 40;
@@ -25,127 +25,65 @@ interface PostProps {
   isCommented: boolean;
   postId: number;
   theme: any;
-  onReady?: (postId: number) => void;
-  isVisible?: boolean;
+  onReady?: () => void;
 }
 
-const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, description, text, likes, comments, isLiked, isCommented, postId, theme, onReady, isVisible }) => {
+const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, description, text, likes, comments, isLiked, isCommented, postId, theme, onReady }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [liked, setLiked] = useState(isLiked);
   const [likeCount, setLikeCount] = useState(likes);
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
-  const router = useRouter();
-  const totalImagesToLoad = 1 + IMAGES.length; // 1 pour l'image profil + images du post
-  const [imagesLoadedCount, setImagesLoadedCount] = useState(0);
-  const loadedImagesRef = useRef(new Set<number>());
-  const [isMounted, setIsMounted] = useState(false);
-  const [hasNotifiedReady, setHasNotifiedReady] = useState(false);
-  const [hasLayout, setHasLayout] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-  const onImageLoad = (index: number) => {
-    if (!loadedImagesRef.current.has(index)) {
-      loadedImagesRef.current.add(index);
-      setImagesLoadedCount(c => c + 1);
-    }
-  };
-  useEffect(() => {
-    if (isMounted && hasLayout && imagesLoadedCount === totalImagesToLoad && !hasNotifiedReady) {
-      setHasNotifiedReady(true);
-      onReady?.(postId);
-    }
-  }, [isMounted, hasLayout, imagesLoadedCount, totalImagesToLoad]);
-  const toggleLike = () => {
-    if (liked) {
-      setLiked(false);
-      setLikeCount(prev => prev - 1);
-      API("delete-like-post", { postId });
-    } else {
-      setLiked(true);
-      setLikeCount(prev => prev + 1);
-      API("add-like-post", { postId });
-    }
-  };
 
+  const toggleLike = () => {
+    setLiked(!liked);
+    setLikeCount(prev => liked ? prev - 1 : prev + 1);
+
+    InteractionManager.runAfterInteractions(() => {
+      if (liked) {
+        API("delete-like-post", { postId });
+      } else {
+        API("add-like-post", { postId });
+      }
+    });
+  };
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
     if (viewableItems.length > 0) setActiveIndex(viewableItems[0].index ?? 0);
   }).current;
-
+  useEffect(() => {
+    if (onReady) {
+      const timeout = setTimeout(() => {
+        onReady();
+      }, 0);
+      return () => clearTimeout(timeout);
+    }
+  }, []);
   return (
     <View 
-      onLayout={() => setHasLayout(true)}
       style={[
         styles.post,
         {
           backgroundColor: theme.post,
-          opacity: isVisible ? 1 : 0,
-          height: isVisible ? 'auto' : 0,
-          overflow: 'hidden',
-          margin: isVisible ? 10 : 0,
-          paddingBottom: isVisible ? 16 : 0,
-          paddingTop: isVisible ? 0 : 0,
-          paddingHorizontal: isVisible ? 0 : 0,
-          borderRadius: isVisible ? 10 : 0,
-        },
-        !isVisible && {
-          opacity: 0,
-          height: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
         }
       ]}
-      pointerEvents={isVisible ? 'auto' : 'none'}
     >
       {/* Header */}
-      <View style={[styles.postHeader, !isVisible && {
-        opacity: 0,
-        height: 0,
-        overflow: 'hidden',
-        margin: 0,
-        padding: 0,
-      }]}>
-        <View style={[{ marginRight: 12 }, !isVisible && {
-          opacity: 0,
-          height: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-        }]}>
-          <View style={[styles.profileContainer, !isVisible && {
-            opacity: 0,
-            height: 0,
-            overflow: 'hidden',
-            margin: 0,
-            padding: 0,
-          }]}>
-            <Image
+      <View style={styles.postHeader}>
+        <View style={{ marginRight: 12 }}>
+          <View style={styles.profileContainer}>
+            <PostImage
               source={profileImage}
+              index={0}
               style={styles.profileImage}
-              contentFit="cover"
-              onLoad={() => onImageLoad(0)}
+              placeholderColor={theme.placeholderPrimary}
             />
           </View>
         </View>
-        <View style={[{ flex: 1 }, !isVisible && {
-          opacity: 0,
-          height: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-        }]}>
+        <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: 'bold', fontSize: 16, color: theme.text }}>{name}</Text>
           <Text style={{ color: theme.text, fontSize: 12, marginTop: 2 }}>{formaterDate(date)}</Text>
         </View>
-        <View style={[{ flexDirection: 'row', alignItems: 'center' }, !isVisible && {
-          opacity: 0,
-          height: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-        }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity style={{ transform: [{ rotate: '-35deg' }], top: -2 }}>
             <SendIcon color={theme.icon} size={20} />
           </TouchableOpacity>
@@ -157,36 +95,28 @@ const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, descripti
 
       {/* Content */}
       {IMAGES.length > 0 ? (
-        <View style={[styles.postContainerImage, !isVisible && {
-          opacity: 0,
-          height: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-        }]}>
+        <View style={styles.postContainerImage}>
           <Animated.FlatList
             ref={flatListRef}
             data={IMAGES}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            keyExtractor={(_, i) => i.toString()}
+            keyExtractor={(item, index) => item + '-' + index}
+            initialNumToRender={1}
+            maxToRenderPerBatch={2}
+            removeClippedSubviews={true}
+            windowSize={2}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={{ viewAreaCoveragePercentThreshold: 80 }}
             renderItem={({ item, index }) => (
-              <View style={[styles.imageWrapper, !isVisible && {
-                opacity: 0,
-                height: 0,
-                overflow: 'hidden',
-                margin: 0,
-                padding: 0,
-              }]}>
-                <Image
+              <View style={styles.imageWrapper}>
+                <PostImage
                   source={item}
+                  index={index + 1}
                   style={styles.image}
-                  contentFit="cover"
-                  onLoad={() => onImageLoad(index + 1)} 
+                  placeholderColor={theme.placeholderPrimary}
                 />
               </View>
             )}
@@ -205,25 +135,13 @@ const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, descripti
           </View>
         </View>
       ) : (
-        <View style={[styles.postContainerText, !isVisible && {
-          opacity: 0,
-          height: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-        }]}>
+        <View style={styles.postContainerText}>
           <Text style={[styles.postText, { color: theme.text }]}>{text}</Text>
         </View>
       )}
 
       {/* Actions */}
-      <View style={[styles.postActions, !isVisible && {
-        opacity: 0,
-        height: 0,
-        overflow: 'hidden',
-        margin: 0,
-        padding: 0,
-      }]}>
+      <View style={styles.postActions}>
         <TouchableOpacity onPress={toggleLike} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}>
           <LikeIcon color={liked ? '#ff0000' : theme.icon} size={24} isLiked={liked} />
           <Text style={[styles.countText, { color: theme.text }]}>{likeCount}</Text>
@@ -236,13 +154,7 @@ const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, descripti
 
       {/* Description */}
       {IMAGES.length > 0 && (
-        <View style={[styles.postDescription, !isVisible && {
-          opacity: 0,
-          height: 0,
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-        }]}>
+        <View style={styles.postDescription}>
           <Text style={[styles.postText, { color: theme.text }]}>{description}</Text>
         </View>
       )}
@@ -252,8 +164,8 @@ const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, descripti
 
 const styles = StyleSheet.create({
   post: {
-    // margin: 10, // removed for dynamic style
-    // paddingBottom: 16, // removed for dynamic style
+    margin: 10,
+    paddingBottom: 16,
     borderRadius: 10,
     justifyContent: 'flex-start',
     alignItems: 'center',
@@ -342,4 +254,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Post;
+export default React.memo(Post);
