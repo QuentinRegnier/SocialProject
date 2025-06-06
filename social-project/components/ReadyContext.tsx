@@ -1,25 +1,37 @@
-// context/ReadyContext.tsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
+
+const pagesToLoad = ['main', 'post-image-text'];
 
 type ReadyContextType = {
-  screenReady: boolean;
-  setScreenReady: (ready: boolean) => void;
+  pagesReady: Record<string, boolean>;
+  setPageReady: (page: string, ready: boolean) => void;
+  appReady: boolean;
 };
 
 const ReadyContext = createContext<ReadyContextType>({
-  screenReady: false,
-  setScreenReady: () => {},
+  pagesReady: {},
+  setPageReady: () => {},
+  appReady: false,
 });
 
 export const useReady = () => useContext(ReadyContext);
 
 export const ReadyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [screenReady, setScreenReady] = useState(false);
+  const [pagesReady, setPagesReady] = useState<Record<string, boolean>>({});
+
+  const setPageReady = (page: string, ready: boolean) => {
+    setPagesReady(prev => ({ ...prev, [page]: ready }));
+  };
+
+  const appReady = useMemo(() => {
+    return pagesToLoad.every(page => pagesReady[page]);
+  }, [pagesReady]);
 
   return (
-    <ReadyContext.Provider value={{ screenReady, setScreenReady }}>
+    <ReadyContext.Provider value={{ pagesReady, setPageReady, appReady }}>
       {children}
     </ReadyContext.Provider>
   );
-}; 
+};
+
 export default ReadyProvider;

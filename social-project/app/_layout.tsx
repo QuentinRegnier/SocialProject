@@ -1,26 +1,28 @@
-// /app/_layout.tsx
-import React, { useState } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+// app/_layout.tsx
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { ReadyProvider, useReady } from '../components/ReadyContext';
 import { Slot } from 'expo-router';
-import LoadingScreen from './'; // assure-toi que ce fichier existe et exporte un composant par défaut
+import LoadingScreen from './'; 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function InnerLayout() {
-  const { screenReady } = useReady();
+  const { appReady } = useReady();
   const [showApp, setShowApp] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(1));
 
-  React.useEffect(() => {
-    if (screenReady && !showApp) {
+  useEffect(() => {
+    if (appReady && !showApp) {
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 500,
+        easing: Easing.out(Easing.ease), // Ajoute de la fluidité
         useNativeDriver: true,
       }).start(() => {
         setShowApp(true);
       });
     }
-  }, [screenReady]);
+  }, [appReady]);
 
   return (
     <>
@@ -38,8 +40,10 @@ function InnerLayout() {
 
 export default function Layout() {
   return (
-    <ReadyProvider>
-      <InnerLayout />
-    </ReadyProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ReadyProvider>
+        <InnerLayout />
+      </ReadyProvider>
+    </GestureHandlerRootView>
   );
 }

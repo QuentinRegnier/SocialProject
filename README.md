@@ -70,3 +70,7 @@
 - Nettoyage du code en créant des composants qu'on a ensuite importer
 ### Mercredi 4 juin 2025 :
 - Rendre fluide le montage des post lors de l'initialisation de `main.tsx` et dans pour la fonction `refresh`
+### Vendredi 6 juin 2025 :
+- Ajout de la page `post-image-text.tsx`
+- Rendre plus fluide l'annimation de loading princiapale
+- Transmettre la page précente lors du click sur post via `NavBar.tsx`

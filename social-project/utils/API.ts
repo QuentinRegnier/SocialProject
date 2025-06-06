@@ -20,18 +20,18 @@ export async function API(request: APIRequest, data: any): Promise<any> {
   try {
     switch (action) {
       case 1: {
-        const response = await fetch("http://192.168.1.53:8000/database/user.json");
+        const response = await fetch("http://192.168.1.150:8000/database/user.json");
         const json = await response.json();
         return json[data];
       }
       case 2: {
-        const response = await fetch("http://192.168.1.53:8000/database/post.json");
+        const response = await fetch("http://192.168.1.150:8000/database/post.json");
         const json = await response.json();
         const tableau = Array.isArray(json) ? json : Object.values(json);
         return tableau[0];
       }
       case 3: {
-        const response = await fetch("http://192.168.1.53:8000/database/post.json");
+        const response = await fetch("http://192.168.1.150:8000/database/post.json");
         const json = await response.json();
         const tableau = Array.isArray(json) ? json : Object.values(json);
         return tableau;

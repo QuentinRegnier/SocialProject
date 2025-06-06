@@ -7,10 +7,9 @@ const isConnected = true; // À remplacer par ta logique d’auth
 export default function Loading() {
   const router = useRouter();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [destination, setDestination] = useState<'/main' | '/login' | null>(null);
-  const hasNavigated = useRef(false); // Pour éviter la navigation multiple
+  const [destination, setDestination] = useState<"/login" | "/(tabs)/main" | null>(null);
+  const hasNavigated = useRef(false);
 
-  // Fade-in du texte "Mon App" dès que le composant est monté
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -19,16 +18,19 @@ export default function Loading() {
     }).start();
   }, []);
 
-  // Détermine rapidement la destination (main ou login)
   useEffect(() => {
-    const dest: '/main' | '/login' = isConnected ? '/main' : '/login';
-    setDestination(dest);
-  }, []);
+    if (!isConnected) {
+      setDestination('/login');
+    } else {
+      if (!destination) {
+        setDestination('/(tabs)/main');
+      }
+    }
+  }, [destination]);
 
-  // Dès que le délai est passé et qu’on connaît la destination, on navigue
   useEffect(() => {
     if (destination && !hasNavigated.current) {
-      hasNavigated.current = true; // Empêche la navigation multiple
+      hasNavigated.current = true;
       router.replace(destination);
     }
   }, [destination]);

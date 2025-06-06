@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
-import HomeIcon from '../assets/icons/HomeIcon';
-import ChatIcon from '../assets/icons/ChatIcon';
-import SearchIcon from '../assets/icons/SearchIcon';
-import PubIcon from '../assets/icons/PubIcon';
+import HomeIcon from '@/assets/icons/HomeIcon';
+import ChatIcon from '@/assets/icons/ChatIcon';
+import SearchIcon from '@/assets/icons/SearchIcon';
+import PubIcon from '@/assets/icons/PubIcon';
 import { LightTheme, DarkTheme } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,10 +18,11 @@ interface NavBarProps {
   imageUser: string | undefined;
   isHome?: boolean;
   isChat?: boolean;
+  activeTab?: '/(tabs)/main' | '/(tabs)/chat' | '/(tabs)/search'; // Pour gérer l'onglet actif
   onReady?: () => void; // Callback pour signaler que la navBar est prête
 }
 
-const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat, onReady }) => {
+const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat, activeTab, onReady }) => {
   const theme = isLight ? LightTheme : DarkTheme;
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -59,15 +60,20 @@ const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat, onR
       <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
         <HomeIcon color={isHome ? theme.activeIcon : theme.icon} size={ICON_SIZE} isHome={isHome} />
       </TouchableOpacity>
-      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+      <TouchableOpacity 
+        style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }}
+      >
         <SearchIcon color={theme.icon} size={ICON_SIZE} />
       </TouchableOpacity>
-      <TouchableOpacity style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} >
+      <TouchableOpacity 
+        style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }}
+        onPress={() => router.push({ pathname: '/(tabs)/post-image-text', params: { prevPage: activeTab } })}
+      >
         <PubIcon color={theme.icon} size={ICON_SIZE} />
       </TouchableOpacity>
       <TouchableOpacity 
         style={(insets.bottom >0) ? { marginTop: -30 } : { marginTop: -10 }} 
-        onPress={() => router.push('/chat')}
+        onPress={() => router.push('/(tabs)/chat')}
       >
           <ChatIcon color={isChat ? theme.activeIcon : theme.icon} size={ICON_SIZE} isChat={isChat} />
       </TouchableOpacity>

@@ -1,18 +1,20 @@
 import React, { useState, useRef, useEffect, use, JSX } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, useColorScheme, Image, Animated, RefreshControl, FlatList } from 'react-native';
+import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, Animated, useColorScheme, Image, RefreshControl, FlatList } from 'react-native';
 // ################# Components #################
-import NavBar from '../components/NavBar';
-import Post from '../components/Post';
+import NavBar from '../../components/NavBar';
+import Post from '../../components/Post';
 import { TAB_BAR_HEIGHT } from '@/components/NavBar';
+import PreloadScreens from '@/components/PreloadScreens';
 // ################# Styles #################
 import { LightTheme, DarkTheme } from '@/constants/Colors';
 // ################# Loading Strategy #################
-import { useReady } from '../components/ReadyContext';
+import { useReady } from '@/components/ReadyContext';
 // ################# Functions #################
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { API } from '@/utils/API';
 import { searchFileSystem, fetchFileSystem, setFileSystem } from '@/utils/FileSystemsManager';
+
 // ################################################
 
 const {height, width} = Dimensions.get('window');
@@ -30,7 +32,7 @@ export default function Main() {
     console.log("Statut de la connexion :", isOffline ? "Hors ligne" : "En ligne");
   }, [isOffline]);
   const [localInfoUser, setLocalInfoUser] = useState<any | null>(null);
-  const init_infoUser = require('../assets/data-user/profile-info.json');
+  const init_infoUser = require('@/assets/data-user/profile-info.json');
   const initFilePath = 'profile-info.json';
   const initLocalInfoUser = async () => {
     await setFileSystem(initFilePath, undefined, init_infoUser);
@@ -103,8 +105,8 @@ export default function Main() {
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
-    setPostRecommandation([]); // Supprimer les posts actuels (optionnel)
     setPostLoadedIds(new Set()); // Réinitialiser le compteur de posts chargés
+    setPostRecommandation([]); // Supprimer les posts actuels (optionnel)
     await fetchData();
     setRefreshing(false);
   };
@@ -112,7 +114,7 @@ export default function Main() {
     return Math.min(L, A + B * Math.floor(W / 2)) - N;
   }
   // ########### Ready Context ###########
-  const { setScreenReady } = useReady();
+  const { setPageReady } = useReady();
   const [layoutReady, setLayoutReady] = useState(false);
   const [navBarReady, setNavBarReady] = useState(false);
   const [profileImageLoaded, setProfileImageLoaded] = useState(false);
@@ -123,7 +125,6 @@ export default function Main() {
   const onPostReady = (id: string) => {
     setPostLoadedIds(prev => new Set(prev).add(id));
   };
-  const [ready, setReady] = useState(false);
   useEffect(() => {
     console.log(postLoadedIds.size, postRecommandation?.length);
     console.log("Post Loaded:", postLoadedIds);
@@ -174,11 +175,12 @@ export default function Main() {
     };
   }, [postRecommandation, infoUser]);
   useEffect(() => {
-    if (layoutReady && navBarReady && postLoadedIds.size >= predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 0)) {
-      setScreenReady(true);
-      setReady(true);
+    if (layoutReady && navBarReady && postLoadedIds.size >= predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1)) {
+      setPageReady('main', true);
     }
-  }, [layoutReady, navBarReady, postLoadedIds, postRecommandation]);
+  }, [layoutReady, navBarReady, postLoadedIds, postRecommandation]); //regarder si on charge aucun post cela marche aussi
+  // ########### Fludity refresh ###########
+  const isReadyRefreshing = !refreshing || (refreshing && postLoadedIds.size < predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1));
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]} onLayout={() => setLayoutReady(true)}>
       <StatusBar barStyle={isLight ? 'dark-content' : 'light-content'} />
@@ -194,27 +196,28 @@ export default function Main() {
           style={[
             styles.main,
             { top: -insets.top },
-            { backgroundColor: theme.background },
-            (ready && postLoadedIds.size < predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1)) ? { opacity: 0 } : { opacity: 1 }
+            { backgroundColor: theme.background }
           ]}
           showsVerticalScrollIndicator={false}
           keyExtractor={(post) => `post-${post.id}`}
           renderItem={({ item: post }) => (
-            <Post
-              profileImage={post.profileImage}
-              name={post.name}
-              date={post.date}
-              IMAGES={post.IMAGES}
-              description={post.description}
-              text={post.text}
-              likes={post.likes}
-              comments={post.comments}
-              isLiked={post.isLiked}
-              isCommented={post.isCommented}
-              postId={post.id}
-              theme={theme}
-              onReady={() => onPostReady(post.id)}
-            />
+            <Animated.View style={{ opacity: isReadyRefreshing ? 1 : 0 }}>
+              <Post
+                profileImage={post.profileImage}
+                name={post.name}
+                date={post.date}
+                IMAGES={post.IMAGES}
+                description={post.description}
+                text={post.text}
+                likes={post.likes}
+                comments={post.comments}
+                isLiked={post.isLiked}
+                isCommented={post.isCommented}
+                postId={post.id}
+                theme={theme}
+                onReady={() => onPostReady(post.id)}
+              />
+            </Animated.View>
           )}
           initialNumToRender={initialNumToRender}
           maxToRenderPerBatch={maxToRenderPerBatch}
@@ -246,9 +249,11 @@ export default function Main() {
         )}
       {localProfileImageUri && (
         <Animated.View style={{ opacity: navBarOpacity }}>
-          <NavBar isLight={isLight} imageUser={localProfileImageUri ?? undefined} isHome={true} onReady={() => setNavBarReady(true)} />
+          <NavBar isLight={isLight} imageUser={localProfileImageUri ?? undefined} isHome={true} onReady={() => setNavBarReady(true)} activeTab='/(tabs)/main' />
         </Animated.View>
       )}
+      {/* Précharge en fond */}
+      <PreloadScreens />
     </View>
   );
 }
