@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, use, JSX } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, Animated, useColorScheme, Image, RefreshControl, FlatList } from 'react-native';
+import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, View, Animated, useColorScheme, Image, RefreshControl, FlatList, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import * as Font from 'expo-font';
 // ################# Components #################
 import NavBar from '../../components/NavBar';
 import Post from '../../components/Post';
@@ -14,7 +16,6 @@ import { useReady } from '@/components/ReadyContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { API } from '@/utils/API';
 import { searchFileSystem, fetchFileSystem, setFileSystem } from '@/utils/FileSystemsManager';
-
 // ################################################
 
 const {height, width} = Dimensions.get('window');
@@ -23,6 +24,7 @@ const IMAGE_SIZE = width - 40;
 
 // ###############################################
 export default function Main() {
+  //const isIOS = Platform.OS === 'ios';
   const initialNumToRender = 3;
   const maxToRenderPerBatch = 5;
   const windowSize = 10;
@@ -113,6 +115,14 @@ export default function Main() {
   function predictedGeneratePosts(L: number, A: number, B: number, W: number, N: number): number {
     return Math.min(L, A + B * Math.floor(W / 2)) - N;
   }
+  // ########### Fonts ###########
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  useEffect(() => {
+    console.log("Chargement des polices...");
+    Font.loadAsync({
+      'Caveat': require('@/assets/fonts/Caveat-VariableFont_wght.ttf'),
+    }).then(() => setFontsLoaded(true));
+  }, []); 
   // ########### Ready Context ###########
   const { setPageReady } = useReady();
   const [layoutReady, setLayoutReady] = useState(false);
@@ -175,28 +185,45 @@ export default function Main() {
     };
   }, [postRecommandation, infoUser]);
   useEffect(() => {
-    if (layoutReady && navBarReady && postLoadedIds.size >= predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1)) {
+    if (layoutReady && navBarReady && fontsLoaded && postLoadedIds.size >= predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1)) {
       setPageReady('main', true);
     }
-  }, [layoutReady, navBarReady, postLoadedIds, postRecommandation]); //regarder si on charge aucun post cela marche aussi
+  }, [layoutReady, navBarReady, postLoadedIds, postRecommandation, fontsLoaded]); //regarder si on charge aucun post cela marche aussi
   // ########### Fludity refresh ###########
-  const isReadyRefreshing = !refreshing || (refreshing && postLoadedIds.size < predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1));
+  const isReadyRefreshing = !refreshing || (refreshing && postLoadedIds.size < predictedGeneratePosts((postRecommandation?.length || 0), initialNumToRender, maxToRenderPerBatch, windowSize, 1)); 
+
+  if (!fontsLoaded) {
+    return null; // ou un loader simple
+  }
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]} onLayout={() => setLayoutReady(true)}>
       <StatusBar barStyle={isLight ? 'dark-content' : 'light-content'} />
         {/* header */}
-        <View style={[styles.header, { top: -insets.top, height: HEADER_HEIGHT + 2*insets.top }, { backgroundColor: theme.header }]}>
-          <Text style={{ color: theme.text, fontSize: 24, padding: 16 }}>Naturist</Text>
+        <View style={[styles.header, { height: HEADER_HEIGHT + insets.top, paddingTop: insets.top }]}>
+          {/* Blur progressif */}
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            {/* Flou uniforme sur tout le header */}
+            <BlurView
+              tint={isLight ? 'light' : 'dark'}
+              intensity={60}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
+
+          {/* Contenu du header */}
+          <Text style={{ color: theme.text, fontSize: 40, padding: 0, fontFamily: 'Caveat' }}>Naturist</Text>
         </View>
         {/* Main content scrollable */}
         {!isOffline?(
         <FlatList
           data={postRecommandation}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: HEADER_HEIGHT + insets.top }  // ou un petit nombre
+          ]}
           style={[
             styles.main,
-            { top: -insets.top },
-            { backgroundColor: theme.background }
+            { backgroundColor: theme.background,  }
           ]}
           showsVerticalScrollIndicator={false}
           keyExtractor={(post) => `post-${post.id}`}
@@ -233,6 +260,7 @@ export default function Main() {
               onRefresh={onRefresh}
               colors={['#ff0000']}
               tintColor={theme.text}
+              progressViewOffset={HEADER_HEIGHT + insets.top}  // 👈 décalage du spinner
             />
           }
         />
@@ -249,7 +277,7 @@ export default function Main() {
         )}
       {localProfileImageUri && (
         <Animated.View style={{ opacity: navBarOpacity }}>
-          <NavBar isLight={isLight} imageUser={localProfileImageUri ?? undefined} isHome={true} onReady={() => setNavBarReady(true)} activeTab='/(tabs)/main' />
+          <NavBar isLight={isLight} imageUser={localProfileImageUri ?? undefined} isHome={true} onReady={() => setNavBarReady(true)} activeTab='/(tabs)/main' isIOS={false} />
         </Animated.View>
       )}
       {/* Précharge en fond */}
@@ -266,6 +294,13 @@ const styles = StyleSheet.create({
   header: {
     justifyContent: 'flex-end',
     alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+    zIndex: 10,
+    elevation: 10, // important sur Android
   },
   main: {
     flex: 1,
@@ -363,4 +398,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'justify',
   },
+  blurSegment: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 32,
+  },
 });
+
+// Mettre isIOS={isIOS} sur la NavBar si tu veux gérer la plateforme correctement et réellement surtout
+// Mettre un composant natif pour que le header soit un gradient flou progressif

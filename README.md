@@ -74,3 +74,14 @@
 - Ajout de la page `post-image-text.tsx`
 - Rendre plus fluide l'annimation de loading princiapale
 - Transmettre la page précente lors du click sur post via `NavBar.tsx`
+### Mercredi 11 juin 2025 :
+- Ajout du liquid glass d'apple pour la navbar
+> ❗ pas d'analyse de l'arrière de la navbar donc pas possible sans `expo eject` de rendre dynamique le changement de couleur de la navbar
+- Ajout d'icone standardiser pour la navbar
+> ❗ pas d'icone standadiser apple il faut pour cela fait une demande à l'api en natif donc avec `expo eject` c'est pourquoi isIOS est toujours faux pour le moment
+- Ajout d'un fond flou uniforme pour le header
+> ❗ volonté de faire un flou en gradient de plus en plus flou mais disponible qu'après un `expo eject` avec un module natif
+- Changement de la police du nom de l'application
+- Modification des couleurs de texte des posts
+- Alignement du contenu des posts avec le pseudo
+- Mis le texte decriptif avant les images

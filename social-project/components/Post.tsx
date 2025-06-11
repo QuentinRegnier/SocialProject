@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import PostImage from '@/components/PostImage';
 
 const { width } = Dimensions.get('window');
-const IMAGE_SIZE = width - 40;
+const IMAGE_SIZE = width - 100;
 
 interface PostProps {
   profileImage: string;
@@ -59,112 +59,109 @@ const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, descripti
     }
   }, []);
   return (
-    <View 
-      style={[
-        styles.post,
-        {
-          backgroundColor: theme.post,
-        }
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.postHeader}>
-        <View style={{ marginRight: 12 }}>
-          <View style={styles.profileContainer}>
-            <PostImage
-              source={profileImage}
-              index={0}
-              style={styles.profileImage}
-              placeholderColor={theme.placeholderPrimary}
+    <View style={[styles.post, { flexDirection: 'row', alignItems: 'flex-start' }]}>
+      {/* Colonne 1 : Image de profil */}
+      <View style={styles.profileColumn}>
+        <PostImage
+          source={profileImage}
+          index={0}
+          style={styles.profileImage}
+          placeholderColor={theme.placeholderPrimary}
+        />
+      </View>
+
+      {/* Colonne 2 : Le reste du post */}
+      <View style={styles.contentColumn}>
+        {/* Header avec pseudo + icônes */}
+        <View style={styles.postHeader}>
+          <Text style={[styles.nameText, { color: theme.pseudoPost }]}>{name}</Text>
+          <View style={styles.iconGroup}>
+            <TouchableOpacity style={{ transform: [{ rotate: '-35deg' }], top: -2 }}>
+              <SendIcon color={theme.icon} size={20} />
+            </TouchableOpacity>
+            <TouchableOpacity style={{ marginLeft: 16 }}>
+              <GridIcon color={theme.icon} size={20} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Date */}
+        <Text style={[styles.dateText, { color: theme.datePost }]}>{formaterDate(date)}</Text>
+
+        {/* Description */}
+        {IMAGES.length > 0 && (
+          <View style={styles.postDescription}>
+            <Text style={[styles.postText, { color: theme.textPost }]}>{description}</Text>
+          </View>
+        )}
+        
+        {/* Contenu image ou texte */}
+        {IMAGES.length > 0 ? (
+          <View style={styles.postContainerImage}>
+            <Animated.FlatList
+              ref={flatListRef}
+              data={IMAGES}
+              horizontal
+              pagingEnabled
+              bounces={false}
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item, index) => item + '-' + index}
+              initialNumToRender={1}
+              maxToRenderPerBatch={2}
+              removeClippedSubviews={true}
+              windowSize={2}
+              onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
+              onViewableItemsChanged={onViewableItemsChanged}
+              viewabilityConfig={{ viewAreaCoveragePercentThreshold: 80 }}
+              renderItem={({ item, index }) => (
+                <View style={styles.imageWrapper}>
+                  <PostImage
+                    source={item}
+                    index={index + 1}
+                    style={styles.image}
+                    placeholderColor={theme.placeholderPrimary}
+                  />
+                </View>
+              )}
             />
+            <View style={styles.dotsContainer}>
+              {IMAGES.map((_, i) => (
+                <View key={i} style={[
+                  styles.dot,
+                  {
+                    backgroundColor: activeIndex === i ? 'rgba(255,255,255,0.9)' : 'rgba(120,120,120,0.4)',
+                    width: activeIndex === i ? 10 : 8,
+                    height: activeIndex === i ? 10 : 8
+                  }
+                ]} />
+              ))}
+            </View>
           </View>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: 'bold', fontSize: 16, color: theme.text }}>{name}</Text>
-          <Text style={{ color: theme.text, fontSize: 12, marginTop: 2 }}>{formaterDate(date)}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity style={{ transform: [{ rotate: '-35deg' }], top: -2 }}>
-            <SendIcon color={theme.icon} size={20} />
+        ) : (
+          <View style={styles.postContainerText}>
+            <Text style={[styles.postText, { color: theme.textPost }]}>{text}</Text>
+          </View>
+        )}
+
+        {/* Actions */}
+        <View style={styles.postActions}>
+          <TouchableOpacity onPress={toggleLike} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}>
+            <LikeIcon color={liked ? '#ff0000' : theme.icon} size={24} isLiked={liked} />
+            <Text style={[styles.countText, { color: theme.text }]}>{likeCount}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ marginLeft: 16 }}>
-            <GridIcon color={theme.icon} size={20} />
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <CommentIcon color={isCommented ? '#079d25' : theme.icon} size={24} isCommented={isCommented} />
+            <Text style={[styles.countText, { color: theme.text }]}>{comments}</Text>
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Content */}
-      {IMAGES.length > 0 ? (
-        <View style={styles.postContainerImage}>
-          <Animated.FlatList
-            ref={flatListRef}
-            data={IMAGES}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item, index) => item + '-' + index}
-            initialNumToRender={1}
-            maxToRenderPerBatch={2}
-            removeClippedSubviews={true}
-            windowSize={2}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={{ viewAreaCoveragePercentThreshold: 80 }}
-            renderItem={({ item, index }) => (
-              <View style={styles.imageWrapper}>
-                <PostImage
-                  source={item}
-                  index={index + 1}
-                  style={styles.image}
-                  placeholderColor={theme.placeholderPrimary}
-                />
-              </View>
-            )}
-          />
-          <View style={styles.dotsContainer}>
-            {IMAGES.map((_, i) => (
-              <View key={i} style={[
-                styles.dot,
-                {
-                  backgroundColor: activeIndex === i ? 'rgba(255,255,255,0.9)' : 'rgba(120,120,120,0.4)',
-                  width: activeIndex === i ? 10 : 8,
-                  height: activeIndex === i ? 10 : 8
-                }
-              ]} />
-            ))}
-          </View>
-        </View>
-      ) : (
-        <View style={styles.postContainerText}>
-          <Text style={[styles.postText, { color: theme.text }]}>{text}</Text>
-        </View>
-      )}
-
-      {/* Actions */}
-      <View style={styles.postActions}>
-        <TouchableOpacity onPress={toggleLike} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}>
-          <LikeIcon color={liked ? '#ff0000' : theme.icon} size={24} isLiked={liked} />
-          <Text style={[styles.countText, { color: theme.text }]}>{likeCount}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <CommentIcon color={isCommented ? '#079d25' : theme.icon} size={24} isCommented={isCommented} />
-          <Text style={[styles.countText, { color: theme.text }]}>{comments}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Description */}
-      {IMAGES.length > 0 && (
-        <View style={styles.postDescription}>
-          <Text style={[styles.postText, { color: theme.text }]}>{description}</Text>
-        </View>
-      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   post: {
-    margin: 10,
+    margin: 0,
     paddingBottom: 16,
     borderRadius: 10,
     justifyContent: 'flex-start',
@@ -173,9 +170,8 @@ const styles = StyleSheet.create({
   },
   postHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 16,
     marginTop: 16,
   },
   profileContainer: {
@@ -197,10 +193,10 @@ const styles = StyleSheet.create({
     height: IMAGE_SIZE,
     borderRadius: 18,
     overflow: 'hidden',
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     marginTop: 12,
     marginBottom: 8,
-    backgroundColor: '#eee',
+    backgroundColor: '#7f7f7f',
   },
   postContainerText: {
     width: IMAGE_SIZE,
@@ -235,7 +231,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    paddingHorizontal: 16,
     marginBottom: 4,
     marginTop: 2,
   },
@@ -244,13 +239,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   postDescription: {
-    width: '100%',
-    paddingHorizontal: 16,
+    width: IMAGE_SIZE,
     marginTop: 4,
   },
   postText: {
     fontSize: 15,
     textAlign: 'justify',
+  },
+  profileColumn: {
+    width: 60, // largeur fixe pour l'image profil + un peu de marge
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  contentColumn: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  iconGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nameText: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  dateText: {
+    fontSize: 12,
+    marginBottom: 8,
   },
 });
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Font from 'expo-font';
 
 const isConnected = true; // À remplacer par ta logique d’auth
 
@@ -9,6 +10,14 @@ export default function Loading() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [destination, setDestination] = useState<"/login" | "/(tabs)/main" | null>(null);
   const hasNavigated = useRef(false);
+  // ########### Fonts ###########
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  useEffect(() => {
+    console.log("Chargement des polices...");
+    Font.loadAsync({
+      'Caveat': require('@/assets/fonts/Caveat-VariableFont_wght.ttf'),
+    }).then(() => setFontsLoaded(true));
+  }, []); 
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -34,10 +43,12 @@ export default function Loading() {
       router.replace(destination);
     }
   }, [destination]);
-
+  if (!fontsLoaded) {
+    return null; // ou un loader simple
+  }
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <Text style={styles.text}>Naturist</Text>
+      <Text style={[styles.text, { fontFamily: 'Caveat'}]}>Naturist</Text>
     </Animated.View>
   );
 }
@@ -50,7 +61,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   text: {
-    fontSize: 32,
+    fontSize: 50,
     fontWeight: 'bold',
   },
 });

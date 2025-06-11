@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { use, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, PanResponder } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,25 +26,36 @@ export default function PostImageText({ preload }: Props) {
   
   const toggleFacing = () => {
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
-    if ( facing === 'back' ) {
-      setZoom(0.125); // réinitialise le zoom pour la caméra arrière
-      sliderOffset.value = 0.5; // réinitialise la position du slider
-    }
-    else {
-      setZoom(0); // réinitialise le zoom lors du changement de caméra
-      sliderOffset.value = 0; // réinitialise la position du slider
-    }
   };
 
+  useEffect(() => {
+    if (facing === 'back') {
+      setZoom(0.0625);
+      sliderOffset.value = 0.5;
+    } else {
+      setZoom(0);
+      sliderOffset.value = 0;
+    }
+  }, [facing]);
+
+  useEffect(() => {
+    console.log('zoom changed:', zoom);
+  }, [zoom]);
   const computeCameraZoom = (zoom: number): number => {
-    const maxZoom = 0.25; // valeur maximale acceptée par CameraView (peut être < 1 selon appareil)
+    const maxZoom = 0.05; // valeur maximale acceptée par CameraView (peut être < 1 selon appareil)
     return zoom * maxZoom;
   };
 
   const computeVisualZoom = (zoom: number): number => {
-    const minX = 0.5;
-    const maxX = 2;
-    return Math.round((0.5 * Math.exp(Math.log(4) * zoom)) * 10) / 10;
+    let minX, maxX: number;
+    if (facing == 'back') {
+      minX = 0.5;
+      maxX = 4;
+    } else {
+      minX = 1;
+      maxX = 2;
+    }
+    return Math.round((minX * Math.exp(Math.log(maxX) * zoom)) * 10) / 10;
   };
 
   const pinchGesture = Gesture.Pinch()
