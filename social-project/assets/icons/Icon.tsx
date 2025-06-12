@@ -4,13 +4,21 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { SFSymbol } from 'react-native-sfsymbols';
 import { LightTheme, DarkTheme } from '@/constants/Colors';
 
-const getIconName = (type: 'home' | 'search' | 'post' | 'chat' | 'profile', isIOS: boolean) => {
+const getIconName = (
+  type: 'home' | 'search' | 'post' | 'chat' | 'profile' | 'cross' | 'burger' | 'share' | 'flip_camera' | 'photo_gallery',
+  isIOS: boolean
+) => {
   const iosIcons = {
     home: 'house',
     search: 'magnifying-glass',
     post: 'plus-circle',
     chat: 'bubble-left-right',
     profile: 'person.crop.circle',
+    cross: 'xmark.circle',
+    burger: 'circle.grid.2x3',
+    share : 'square.and.arrow.up',
+    flip_camera: 'arrow.triangle.2.circlepath',
+    photo_gallery: 'photo.on.rectangle',
   };
   const androidIcons = {
     home: 'home',
@@ -18,13 +26,18 @@ const getIconName = (type: 'home' | 'search' | 'post' | 'chat' | 'profile', isIO
     post: 'add-circle',
     chat: 'chat',
     profile: 'account-circle',
+    cross: 'close',
+    burger: 'menu',
+    share: 'share',
+    flip_camera: 'cached',
+    photo_gallery: 'photo',
   };
   return isIOS ? iosIcons[type] : androidIcons[type];
 };
 
 interface IconNavBarProps {
   ICON_SIZE: number;
-  NAME: 'home' | 'search' | 'post' | 'chat' | 'profile'; // Type des icônes
+  NAME: 'home' | 'search' | 'post' | 'chat' | 'profile' | 'cross' | 'burger' | 'share' | 'flip_camera' | 'photo_gallery'; // Type des icônes
   IS_ACTIVE: boolean;
   IS_IOS: boolean;
   IS_LIGHT: boolean; // Optionnel pour le thème clair
@@ -39,6 +52,11 @@ const IconNavBar: React.FC<IconNavBarProps> = ({ ICON_SIZE, NAME, IS_ACTIVE, IS_
         post: 'Post',
         chat: 'Chat',
         profile: 'Profile',
+        cross: 'Close',
+        burger: 'Menu',
+        share: 'Share',
+        flip_camera: 'Flip Camera',
+        photo_gallery: 'Gallery',
     }
     return (
         <View style={[styles.iconContainer, { width: ICON_SIZE + (NO_TEXT ? 0 : 4), height: ICON_SIZE + (NO_TEXT ? 0 : 10) }]}>
@@ -81,3 +99,34 @@ const styles = StyleSheet.create({
 });
 
 export default IconNavBar;
+
+// Ajoute un au composant appeler IconNormal qui prend en entré le nom de l'icone et la taille, et qui retourne l'icône correspondante. Le composant sera coder de la même manière que IconNavBar.
+
+interface IconNormalProps {
+  ICON_SIZE: number;
+  NAME: 'home' | 'search' | 'post' | 'chat' | 'profile' | 'cross' | 'burger' | 'share' | 'flip_camera' | 'photo_gallery'; // Type des icônes
+  IS_IOS: boolean;
+  IS_LIGHT: boolean; // Optionnel pour le thème clair
+}
+const IconNormal: React.FC<IconNormalProps> = ({ ICON_SIZE, NAME, IS_IOS, IS_LIGHT }) => {
+  const theme = IS_LIGHT ? LightTheme : DarkTheme;
+
+  return IS_IOS ? (
+    <SFSymbol
+      name={getIconName(NAME, IS_IOS)}
+      style={{ width: ICON_SIZE, height: ICON_SIZE }}
+      color={theme.icon}
+      weight="regular"
+      scale="medium"
+      multicolor={false}
+    />
+  ) : (
+    <MaterialIcons
+      name={getIconName(NAME, IS_IOS) as React.ComponentProps<typeof MaterialIcons>['name']}
+      size={ICON_SIZE}
+      color={theme.icon}
+    />
+  );
+};
+
+export { IconNormal };

@@ -85,3 +85,10 @@
 - Modification des couleurs de texte des posts
 - Alignement du contenu des posts avec le pseudo
 - Mis le texte decriptif avant les images
+### Jeudi 12 juin 2025 :
+- Mis à jour des distributions : 
+```
+npm install expo@53.0.11 expo-blur@~14.1.5 expo-camera@~16.1.8 expo-image@~2.3.0 expo-linear-gradient@~14.1.5 expo-router@~5.1.0 expo-splash-screen@~0.30.9 expo-symbols@~0.4.5 expo-system-ui@~5.0.8 react-native@0.79.3 react-native-screens@~4.11.1
+```
+- Redisign totale de la partie caméra sauf du slider de zoom
+- Mis à jour vers des icones standardiser SFSYMBOLS et Materials dans `post-image-text.tsx` et `main.tsx`

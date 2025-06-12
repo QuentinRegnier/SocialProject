@@ -6,7 +6,7 @@ import SendIcon from '@/assets/icons/SendIcon';
 import GridIcon from '@/assets/icons/GridIcon';
 import { formaterDate } from '@/utils/formaterDate';
 import { API } from '@/utils/API';
-import { Image } from 'expo-image';
+import { IconNormal } from '@/assets/icons/Icon';
 import PostImage from '@/components/PostImage';
 
 const { width } = Dimensions.get('window');
@@ -76,11 +76,11 @@ const Post: React.FC<PostProps> = ({ profileImage, name, date, IMAGES, descripti
         <View style={styles.postHeader}>
           <Text style={[styles.nameText, { color: theme.pseudoPost }]}>{name}</Text>
           <View style={styles.iconGroup}>
-            <TouchableOpacity style={{ transform: [{ rotate: '-35deg' }], top: -2 }}>
-              <SendIcon color={theme.icon} size={20} />
+            <TouchableOpacity>
+              <IconNormal NAME="share" ICON_SIZE={20} IS_IOS={false} IS_LIGHT={theme.background === '#eeeeee'} />
             </TouchableOpacity>
             <TouchableOpacity style={{ marginLeft: 16 }}>
-              <GridIcon color={theme.icon} size={20} />
+              <IconNormal NAME="burger" ICON_SIZE={20} IS_IOS={false} IS_LIGHT={theme.background === '#eeeeee'} />
             </TouchableOpacity>
           </View>
         </View>

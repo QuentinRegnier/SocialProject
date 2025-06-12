@@ -4,7 +4,7 @@ import { LightTheme, DarkTheme } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import IconNavBar from '@/assets/icons/IconNavBar';
+import IconNavBar from '@/assets/icons/Icon';
 
 
 const { width } = Dimensions.get('window');
@@ -87,7 +87,7 @@ const NavBar: React.FC<NavBarProps> = ({ isLight, imageUser, isHome, isChat, isS
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconWrapper}
-            onPress={() => router.push({ pathname: '/(tabs)/post-image-text', params: { prevPage: activeTab } })}
+            onPress={() => router.push('/(tabs)/post-image-text')}
           >
             <IconNavBar
               ICON_SIZE={ICON_SIZE}

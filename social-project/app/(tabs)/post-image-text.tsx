@@ -1,12 +1,16 @@
 import React, { use, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image, PanResponder } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image, PanResponder, Dimensions } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { MaterialIcons } from '@expo/vector-icons';
+import * as MediaLibrary from 'expo-media-library';
 import { useReady } from '@/components/ReadyContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, runOnJS, useAnimatedStyle, useAnimatedReaction } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import SegmentedSwitch from '@/components/SegmentedSwitchPostCreator';
+import { IconNormal } from '@/assets/icons/Icon';
 
 type Props = {
   preload?: boolean;
@@ -17,13 +21,15 @@ export default function PostImageText({ preload }: Props) {
   const [facing, setFacing] = useState<CameraType>('front');
   const cameraRef = useRef<any>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const { prevPage } = useLocalSearchParams();
   const { setPageReady } = useReady();
   const [zoom, setZoom] = useState(0); // x0.5
   const [sliderWidth, setSliderWidth] = useState(250); // largeur du slider
   const sliderOffset = useSharedValue(0); // position de la bulle (0 à 1)
   const [sliderZoom, setSliderZoom] = useState(0);
-  
+  const [lastPhotoUri, setLastPhotoUri] = useState<string | null>(null);
+  // ########### SafeArea ###########
+  const insets = useSafeAreaInsets();
+
   const toggleFacing = () => {
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   };
@@ -45,6 +51,24 @@ export default function PostImageText({ preload }: Props) {
     const maxZoom = 0.05; // valeur maximale acceptée par CameraView (peut être < 1 selon appareil)
     return zoom * maxZoom;
   };
+  
+  useEffect(() => {
+    (async () => {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status === 'granted') {
+        const media = await MediaLibrary.getAssetsAsync({
+          mediaType: 'photo',
+          first: 1,
+          sortBy: [['creationTime', false]],
+        });
+
+        if (media.assets.length > 0) {
+          const assetInfo = await MediaLibrary.getAssetInfoAsync(media.assets[0].id);
+          setLastPhotoUri(assetInfo.localUri || assetInfo.uri); // `localUri` est prioritaire
+        }
+      }
+    })();
+  }, []);
 
   const computeVisualZoom = (zoom: number): number => {
     let minX, maxX: number;
@@ -127,72 +151,82 @@ export default function PostImageText({ preload }: Props) {
   };
   return (
     <View style={styles.container}>
+      {/* Barre noire top */}
+      <View style={{ backgroundColor: 'black', height: insets.top }} />
+
+      {/* Zone caméra */}
       <GestureDetector gesture={pinchGesture}>
-        <View style={StyleSheet.absoluteFill}>
+        <View style={styles.cameraContainer}>
           <CameraView
             style={StyleSheet.absoluteFill}
             facing={facing}
             ref={cameraRef}
             zoom={computeCameraZoom(zoom)}
           />
+
+          {/* Gradient haut */}
+          <LinearGradient
+            colors={['#000', 'rgba(0,0,0,0.8)']}
+            style={styles.topGradient}
+          >
+            <TouchableOpacity style={styles.crossButton} onPress={() => router.back()}>
+              <IconNormal NAME="cross" ICON_SIZE={24} IS_IOS={false} IS_LIGHT={false} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.hamburgerButton}>
+              <IconNormal NAME="burger" ICON_SIZE={24} IS_IOS={false} IS_LIGHT={false} />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          {/* Preview image de debug */}
+          {imageUri && (
+            <View style={styles.preview}>
+              <Text style={styles.previewText}>Image :</Text>
+              <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+            </View>
+          )}
+
+          {/* Slider zoom */}
+          <View style={styles.zoomSliderContainer}>
+            <Text style={styles.zoomText}>{computeVisualZoom(sliderZoom)}x</Text>
+            <View
+              style={styles.sliderTrack}
+              onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
+            >
+              <GestureDetector gesture={sliderGesture}>
+                <Animated.View style={[styles.sliderThumb, animatedThumbStyle]} />
+              </GestureDetector>
+            </View>
+          </View>
+
+          {/* Gradient bas */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.8)', '#000']}
+            style={styles.bottomGradient}
+          >
+            <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
+              <View style={styles.innerCaptureButton} />
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
       </GestureDetector>
-      <TouchableOpacity
-        style={styles.arrowForwardButton}
-        onPress={() => {
-          const safePrevPage = Array.isArray(prevPage) ? prevPage[0] : prevPage;
-          if (safePrevPage) {
-            router.replace(safePrevPage as any); // ou typage plus strict si tu connais tes routes
-          }
-        }}
-      >
-        <MaterialIcons name="arrow-forward-ios" size={24} color="white" />
-      </TouchableOpacity>
-      <View style={styles.zoomSliderContainer}>
-        <Text style={styles.zoomText}>{computeVisualZoom(sliderZoom)}x</Text>
 
-        <View
-          style={styles.sliderTrack}
-          onLayout={(e) => {
-            const w = e.nativeEvent.layout.width;
-            console.log('Slider width:', w);
-            setSliderWidth(w);
-          }}
-        >
-          <GestureDetector gesture={sliderGesture}>
-            <Animated.View style={[styles.sliderThumb, animatedThumbStyle]} />
-          </GestureDetector>
-        </View>
+      {/* Barre noire bottom */}
+      <View style={[styles.bottomBar, { height: insets.bottom + 70 }]}>
+        <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+          {lastPhotoUri ? (
+            <Image source={{ uri: lastPhotoUri }} style={styles.galleryThumbnail} />
+          ) : (
+            <IconNormal NAME="photo_gallery" ICON_SIZE={50} IS_IOS={false} IS_LIGHT={false} />
+          )}
+        </TouchableOpacity>
+
+        <SegmentedSwitch />
+
+        <TouchableOpacity style={styles.galleryButton} onPress={toggleFacing}>
+          <IconNormal NAME="flip_camera" ICON_SIZE={50} IS_IOS={false} IS_LIGHT={false} />
+        </TouchableOpacity>
       </View>
-      <View style={styles.controls}>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
-            <MaterialIcons name="photo-library" size={30} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.galleryButton} onPress={() => console.log('Texte')}>
-            <MaterialIcons name="text-fields" size={30} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-          <TouchableOpacity style={styles.switchCameraButton} onPress={toggleFacing}>
-            <MaterialIcons name="flip-camera-ios" size={30} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
-            <View style={styles.innerCaptureButton} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {imageUri && (
-        <View style={styles.preview}>
-          <Text style={styles.previewText}>Image :</Text>
-          <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-        </View>
-      )}
-    </View> 
+  </View>
   );
 }
 
@@ -201,74 +235,48 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'black',
   },
-  permissionContainer: {
+  cameraContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  permissionText: {
-    color: 'white',
-    textAlign: 'center',
-    margin: 10,
-  },
-  permissionButton: {
-    backgroundColor: 'blue',
-    padding: 10,
-    borderRadius: 10,
-  },
-  controls: {
+  topGradient: {
     position: 'absolute',
-    bottom: 40,
+    top: 0,
+    height: 70,
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 40,
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  galleryButton: {
-    backgroundColor: '#00000080',
-    padding: 10,
-    borderRadius: 30,
-  },
-  captureButton: {
-    backgroundColor: 'white',
-    borderWidth: 4,
-    borderColor: 'gray',
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+  bottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    height: 90,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  innerCaptureButton: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'white',
-    borderRadius: 25,
-  },
-  preview: {
-    position: 'absolute',
-    bottom: 120,
-    left: 20,
-    right: 20,
-    backgroundColor: '#000000aa',
-    borderRadius: 10,
+  crossButton: {
     padding: 10,
   },
-  previewText: {
-    color: 'white',
-    marginBottom: 5,
+  hamburgerButton: {
+    padding: 10,
   },
-  imagePreview: {
+  bottomOverlay: {
+    position: 'absolute',
+    bottom: 0,
     width: '100%',
-    height: 200,
-    borderRadius: 10,
+    height: 110,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   zoomSliderContainer: {
     position: 'absolute',
-    bottom: 200,
+    bottom: 120,
     width: '100%',
     alignItems: 'center',
+    marginBottom: 30,
   },
   zoomText: {
     color: 'white',
@@ -291,17 +299,68 @@ const styles = StyleSheet.create({
     top: -10,
     marginLeft: -12,
   },
-  switchCameraButton: {
+  captureButton: {
+    backgroundColor: 'white',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  innerCaptureButton: {
+    width: 50,
+    height: 50,
+    backgroundColor: 'white',
+    borderRadius: 25,
+  },
+  bottomBar: {
+    backgroundColor: 'black',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 30,
+    paddingTop: 10,
+  },
+  galleryButton: {
     backgroundColor: '#00000080',
-    padding: 10,
     borderRadius: 30,
   },
-  arrowForwardButton: {
+  preview: {
     position: 'absolute',
-    top: 40,
+    bottom: 180,
+    left: 20,
     right: 20,
-    backgroundColor: '#00000080',
+    backgroundColor: '#000000aa',
+    borderRadius: 10,
     padding: 10,
-    borderRadius: 20,
+  },
+  previewText: {
+    color: 'white',
+    marginBottom: 5,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  permissionText: {
+    color: 'white',
+    textAlign: 'center',
+    margin: 10,
+  },
+  permissionButton: {
+    backgroundColor: 'blue',
+    padding: 10,
+    borderRadius: 10,
+  },
+  galleryThumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
   },
 });
